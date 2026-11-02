@@ -1,0 +1,18 @@
+# 機体ごとに測って作るデータ（別の機体で使い回さない）
+data/*
+!data/README.md
+!data/examples/
+!data/examples/**
+
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+.venv/
+.pytest_cache/
+*.jpg
+*.png
+!docs/*.png
+
+# YOLO の重み（自動ダウンロード）
+*.pt

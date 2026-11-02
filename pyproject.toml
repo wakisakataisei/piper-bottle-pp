@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "piper-bottle-pp"
+version = "0.1.0"
+description = "AgileX PiPER + 手首 RGB-D カメラによるペットボトルのピック＆プレイス（Jetson Orin）"
+requires-python = ">=3.10"
+dependencies = [
+  "numpy",
+  "scipy",
+  "python-can>3.3.4",
+]
+# pyAgxArm（LGPL-3.0）と pyorbbecsdk はソースから入れる（system/install_python.sh）
+# OpenCV は cv2.aruco が使えるもの（opencv-contrib-python など）
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[tool.setuptools]
+packages = ["piper_pp"]
+
+[tool.pytest.ini_options]
+# scripts/ を読み込まない（ROS2 の launch_testing プラグインが全 .py を集めるため）
+testpaths = ["tests"]

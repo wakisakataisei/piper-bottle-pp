@@ -1,0 +1,4 @@
+# USB-CAN を can_piper という名前にし、1 Mbps で自動的に up する
+# KERNELS の値は機体（挿す USB ポート）ごとに違う。system/setup_can.sh が自動で埋める
+# 手で調べる場合: ls -l /sys/class/net/can*/device  → 末尾の 1-2.2:1.0 のような値
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="gs_usb", KERNELS=="@USB_PORT@", NAME="can_piper", RUN+="/bin/sh -c '/sbin/ip link set $name type can bitrate 1000000 && /sbin/ip link set $name up'"

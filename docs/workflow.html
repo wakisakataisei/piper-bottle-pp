@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PiPER ボトル P&amp;P 手順と流れ</title>
+<style>
+  :root {
+    --ink: #1d232a; --sub: #56606b; --line: #d5dae0; --soft: #f3f5f7;
+    --accent: #0b6e69; --accent-soft: #e3f1f0; --warn: #9a5b00; --warn-soft: #fbf1e1;
+    --ok: #2b7a3b; --ng: #a33a2c; --code: #f6f7f9;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { margin: 0; background: #fff; color: var(--ink);
+    font-family: "Noto Sans CJK JP", "Noto Sans JP", "Hiragino Sans", "Yu Gothic", sans-serif;
+    font-size: 10.5pt; line-height: 1.65; }
+  main { max-width: 190mm; margin: 0 auto; padding: 14mm 0 20mm; }
+  @media screen and (max-width: 760px) { main { padding: 16px; } }
+  h1 { font-size: 20pt; margin: 0 0 2mm; letter-spacing: .02em; }
+  h2 { font-size: 13.5pt; margin: 9mm 0 3mm; padding-bottom: 1.5mm; border-bottom: 2px solid var(--accent); break-after: avoid; }
+  h3 { font-size: 11pt; margin: 5mm 0 1.5mm; break-after: avoid; }
+  p { margin: 1.5mm 0; }
+  .meta { color: var(--sub); font-size: 9pt; margin-bottom: 5mm; }
+  .lead { font-size: 11pt; }
+  table { width: 100%; border-collapse: collapse; margin: 2mm 0 3mm; font-size: 9.2pt; break-inside: auto; }
+  th, td { border: 1px solid var(--line); padding: 1.3mm 2mm; vertical-align: top; text-align: left; }
+  th { background: var(--soft); font-weight: 700; }
+  tr { break-inside: avoid; }
+  td.num, th.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  code, pre { font-family: "Noto Sans Mono CJK JP", "DejaVu Sans Mono", monospace; font-size: 8.6pt; }
+  code { background: var(--code); padding: 0 1mm; border-radius: 2px; }
+  pre { background: var(--code); border: 1px solid var(--line); border-radius: 3px; padding: 2mm 3mm; margin: 1.5mm 0 2mm;
+    white-space: pre-wrap; word-break: break-all; break-inside: avoid; }
+  .kpi { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2.5mm; margin: 3mm 0; }
+  .kpi div { border: 1px solid var(--line); border-radius: 3px; padding: 2mm 3mm; }
+  .kpi b { display: block; font-size: 14pt; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .kpi span { font-size: 8.5pt; color: var(--sub); }
+  @media screen and (max-width: 760px) { .kpi { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .note { background: var(--warn-soft); border-left: 3px solid var(--warn); padding: 2mm 3mm; margin: 2mm 0; font-size: 9.5pt; break-inside: avoid; }
+  .tip { background: var(--accent-soft); border-left: 3px solid var(--accent); padding: 2mm 3mm; margin: 2mm 0; font-size: 9.5pt; break-inside: avoid; }
+  .step { border: 1px solid var(--line); border-radius: 3px; padding: 2.5mm 3.5mm; margin: 2.5mm 0; break-inside: avoid; }
+  .step h3 { margin-top: 0; }
+  .step h3 .no { display: inline-block; min-width: 9mm; color: #fff; background: var(--accent); border-radius: 2px;
+    text-align: center; margin-right: 2mm; font-size: 9.5pt; padding: 0 1.5mm; }
+  .step dl { display: grid; grid-template-columns: 22mm 1fr; gap: .5mm 2mm; margin: 1mm 0 0; font-size: 9.5pt; }
+  .step dt { color: var(--sub); }
+  .step dd { margin: 0; }
+  .ok { color: var(--ok); font-weight: 700; }
+  .ng { color: var(--ng); font-weight: 700; }
+  figure { margin: 3mm 0; break-inside: avoid; }
+  figcaption { font-size: 8.8pt; color: var(--sub); margin-top: 1mm; }
+  svg { width: 100%; height: auto; display: block; }
+  svg text { font-family: "Noto Sans CJK JP", sans-serif; }
+  .blank td { height: 7mm; }
+  .page-break { break-before: page; }
+  @page { size: A4; margin: 14mm 12mm 16mm; }
+  @media print { main { padding: 0; max-width: none; } a { color: inherit; text-decoration: none; } }
+</style>
+</head>
+<body>
+<main>
+
+<h1>PiPER ボトル ピック＆プレイス 手順と流れ</h1>
+<div class="meta">リポジトリ piper-bottle-pp v0.1.0 ／ 1号機での立上げ 2026-10-28 ／ 別機体での再現性確認用</div>
+
+<p class="lead">AgileX PiPER の手首に RGB-D カメラを付け、深度の点群だけでボトルのキャップ位置を求め、
+キャップを横から挟んで2つの台の間を往復させる。制御は Jetson Orin 上の Python（pyAgxArm）だけで行い、ROS2・MoveIt・学習モデルは使わない。</p>
+
+<h2>1. 1号機での結果</h2>
+<div class="kpi">
+  <div><b>2.2 mm</b><span>ハンドアイ校正のばらつき平均（最大 4.6 mm、17姿勢）</span></div>
+  <div><b>±5 mm 以内</b><span>校正で推定したマーカー位置とメジャー実測の差</span></div>
+  <div><b>207 mm</b><span>点群で求めたボトル高さ（実測 207 mm）</span></div>
+  <div><b>A↔B 反復</b><span>台A・B間の往復を繰り返し実行し成功</span></div>
+</div>
+<table>
+  <tr><th>項目</th><th>内容</th></tr>
+  <tr><td>ロボット</td><td>AgileX PiPER（HW H-V1.2-1、FW S-V1.8-2）、標準グリッパ AgxGripper（最大 70 mm、把持力 0〜3 N）</td></tr>
+  <tr><td>制御PC</td><td>Jetson Orin 16GB、JetPack 6.2.1（L4T R36.4.7、Ubuntu 22.04.5、カーネル 5.15.148-tegra）</td></tr>
+  <tr><td>カメラ</td><td>Orbbec Dabai DC1（USB2.0、深度 640×400、カラー 640×480 MJPG）。グリッパ側面に上下逆に取付け（eye-in-hand）</td></tr>
+  <tr><td>対象</td><td>500 ml の不透明なボトル（満水で約 550 g）、キャップ直径 30 mm、高さ 207 mm</td></tr>
+  <tr><td>把持</td><td>キャップ上端から 10 mm 下を、水平から 30° 下向きのグリッパで左右から挟む。力 2 N</td></tr>
+  <tr><td>動作</td><td>観察姿勢 look で両台を撮影 → ボトルのある台からつかむ → 10 cm 持ち上げ → 反対の台へ置く → look で置き位置を確認（15 mm 以内で成功）</td></tr>
+</table>
+
+<h2>2. システム構成</h2>
+<figure>
+<svg viewBox="0 0 760 270" role="img" aria-label="システム構成図">
+  <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#56606b"/></marker></defs>
+  <rect x="10" y="10" width="420" height="250" rx="6" fill="#f3f5f7" stroke="#d5dae0"/>
+  <text x="24" y="34" font-size="15" font-weight="700" fill="#1d232a">Jetson Orin 16GB</text>
+  <rect x="30" y="50" width="380" height="62" rx="4" fill="#fff" stroke="#0b6e69"/>
+  <text x="44" y="72" font-size="13" font-weight="700" fill="#0b6e69">scripts/ 00〜09（手順順）</text>
+  <text x="44" y="94" font-size="12" fill="#56606b">09_pick_place.py：撮影 → 位置 → IK → 把持 → 運搬 → 確認</text>
+  <rect x="30" y="124" width="185" height="56" rx="4" fill="#fff" stroke="#d5dae0"/>
+  <text x="42" y="146" font-size="12.5" font-weight="700">piper_pp</text>
+  <text x="42" y="166" font-size="11" fill="#56606b">robot / kinematics / vision</text>
+  <rect x="225" y="124" width="185" height="56" rx="4" fill="#fff" stroke="#d5dae0"/>
+  <text x="237" y="146" font-size="12.5" font-weight="700">data/（機体ごと）</text>
+  <text x="237" y="166" font-size="11" fill="#56606b">poses / T_flange_cam / stations</text>
+  <rect x="30" y="192" width="185" height="54" rx="4" fill="#fff" stroke="#d5dae0"/>
+  <text x="42" y="214" font-size="12.5" font-weight="700">pyAgxArm</text>
+  <text x="42" y="233" font-size="11" fill="#56606b">python-can → can_piper</text>
+  <rect x="225" y="192" width="185" height="54" rx="4" fill="#fff" stroke="#d5dae0"/>
+  <text x="237" y="214" font-size="12.5" font-weight="700">pyorbbecsdk v1</text>
+  <text x="237" y="233" font-size="11" fill="#56606b">OrbbecSDK 1.10.16</text>
+  <rect x="510" y="30" width="235" height="110" rx="6" fill="#fff" stroke="#1d232a"/>
+  <text x="524" y="56" font-size="14" font-weight="700">PiPER ＋ AgxGripper</text>
+  <text x="524" y="80" font-size="11.5" fill="#56606b">CAN 1 Mbps（USB-CAN gs_usb）</text>
+  <text x="524" y="100" font-size="11.5" fill="#56606b">TCP = フランジ点 + 0.145 m</text>
+  <text x="524" y="120" font-size="11.5" fill="#56606b">速度 10%、J6 ±90° 制限</text>
+  <rect x="510" y="168" width="235" height="78" rx="6" fill="#fff" stroke="#1d232a"/>
+  <text x="524" y="194" font-size="14" font-weight="700">Dabai DC1（手首）</text>
+  <text x="524" y="216" font-size="11.5" fill="#56606b">USB2.0、深度＋カラー</text>
+  <text x="524" y="234" font-size="11.5" fill="#56606b">表示のみ 180° 回転</text>
+  <line x1="215" y1="219" x2="505" y2="100" stroke="#56606b" stroke-width="1.6" marker-end="url(#ar)"/>
+  <line x1="410" y1="219" x2="505" y2="207" stroke="#56606b" stroke-width="1.6" marker-start="url(#ar)" marker-end="url(#ar)"/>
+</svg>
+<figcaption>図1 構成。腕の指令とカメラ取得はすべて Jetson 上の1つの Python プロセスで行う（カメラは同時に1プロセスしか開けない）。</figcaption>
+</figure>
+
+<h2>3. 全体の流れ</h2>
+<figure>
+<svg viewBox="0 0 760 120" role="img" aria-label="手順の流れ">
+  <g font-size="12">
+    <rect x="5" y="20" width="96" height="58" rx="4" fill="#e3f1f0" stroke="#0b6e69"/><text x="53" y="44" text-anchor="middle" font-weight="700">A 環境</text><text x="53" y="64" text-anchor="middle" fill="#56606b" font-size="10.5">CAN・Python</text>
+    <rect x="113" y="20" width="96" height="58" rx="4" fill="#e3f1f0" stroke="#0b6e69"/><text x="161" y="44" text-anchor="middle" font-weight="700">B 腕</text><text x="161" y="64" text-anchor="middle" fill="#56606b" font-size="10.5">状態・J6・TCP</text>
+    <rect x="221" y="20" width="96" height="58" rx="4" fill="#e3f1f0" stroke="#0b6e69"/><text x="269" y="44" text-anchor="middle" font-weight="700">C カメラ</text><text x="269" y="64" text-anchor="middle" fill="#56606b" font-size="10.5">疎通・最短距離</text>
+    <rect x="329" y="20" width="96" height="58" rx="4" fill="#e3f1f0" stroke="#0b6e69"/><text x="377" y="44" text-anchor="middle" font-weight="700">D 校正</text><text x="377" y="64" text-anchor="middle" fill="#56606b" font-size="10.5">ハンドアイ</text>
+    <rect x="437" y="20" width="96" height="58" rx="4" fill="#e3f1f0" stroke="#0b6e69"/><text x="485" y="44" text-anchor="middle" font-weight="700">E 検出</text><text x="485" y="64" text-anchor="middle" fill="#56606b" font-size="10.5">キャップ位置</text>
+    <rect x="545" y="20" width="96" height="58" rx="4" fill="#e3f1f0" stroke="#0b6e69"/><text x="593" y="44" text-anchor="middle" font-weight="700">F 把持</text><text x="593" y="64" text-anchor="middle" fill="#56606b" font-size="10.5">接近・持上げ</text>
+    <rect x="653" y="20" width="102" height="58" rx="4" fill="#0b6e69" stroke="#0b6e69"/><text x="704" y="44" text-anchor="middle" font-weight="700" fill="#fff">G 往復</text><text x="704" y="64" text-anchor="middle" fill="#fff" font-size="10.5">台A ↔ 台B</text>
+  </g>
+  <g fill="#56606b" font-size="10.5" text-anchor="middle">
+    <text x="53" y="100">手順 1〜3</text><text x="161" y="100">4〜7</text><text x="269" y="100">8</text><text x="377" y="100">9</text><text x="485" y="100">10</text><text x="593" y="100">11〜12</text><text x="704" y="100">13〜14</text>
+  </g>
+</svg>
+<figcaption>図2 手順の段階。各段階の合格基準を満たしてから次へ進む。前の段階に戻るのは、校正値（TCP・ハンドアイ）を変えたとき。</figcaption>
+</figure>
+
+<div class="tip">各手順の「1号機」は 2026-10-28 の実測値。別機体ではこの値に近いかを比べ、大きく違う場合はそこで止めて原因を調べる。</div>
+
+<h2>4. 手順</h2>
+
+<h3>A 環境（Jetson）</h3>
+<div class="step"><h3><span class="no">1</span>USB-CAN ドライバ（gs_usb）</h3>
+<pre>bash system/build_gs_usb.sh</pre>
+<dl><dt>理由</dt><dd>JetPack 6 の標準カーネルに gs_usb が無い。稼働カーネルと同じ版の gs_usb.c を kernel.org から取得し、外部モジュールとしてビルドする</dd>
+<dt>合格</dt><dd><code>lsmod | grep gs_usb</code> に出る。<code>ip -br link</code> に can1 などが出る（can0 は本体内蔵の mttcan）</dd>
+<dt>注意</dt><dd>入れ先は <code>/lib/modules/$(uname -r)/updates/</code>（drivers/net/can/usb/ は存在しない）。JetPack を更新したら再ビルド。"tainting kernel" の通知は無害</dd></dl></div>
+
+<div class="step"><h3><span class="no">2</span>CAN の名前と速度を固定</h3>
+<pre>bash system/setup_can.sh
+candump can_piper -n 20     # PiPER の電源 ON で 2A1〜2A8・251〜256 が流れる</pre>
+<dl><dt>合格</dt><dd><code>ip -details link show can_piper</code> が ERROR-ACTIVE、bitrate 1000000。抜き差し後も自動で up</dd>
+<dt>1号機</dt><dd>USB ポート 1-2.2:1.0。別のポートに挿したら setup_can.sh を再実行</dd></dl></div>
+
+<div class="step"><h3><span class="no">3</span>Python 環境</h3>
+<pre>bash system/install_python.sh && source ~/.bashrc
+cd ~/piper-bottle-pp && pytest -q          # 実機なしの確認</pre>
+<dl><dt>内容</dt><dd>venv（~/venv_pp、system-site-packages 付き）、pyAgxArm、pyorbbecsdk v1 系（main ブランチ）、piper_pp（pip install -e .）</dd>
+<dt>合格</dt><dd>pytest が 8 件すべて pass（逆運動学、ハンドアイ計算、キャップ位置推定を合成データで確認）</dd>
+<dt>注意</dt><dd>Dabai DC1 は OpenNI 系のため pyorbbecsdk v2 系では認識しない。v1 系を使う</dd></dl></div>
+
+<h3>B 腕</h3>
+<div class="step"><h3><span class="no">4</span>接続と状態（動かさない）</h3>
+<pre>python scripts/00_check.py</pre>
+<dl><dt>合格</dt><dd>FW 版が読める、関節角が更新される、arm_status 正常、全関節ドライバ異常なし</dd>
+<dt>設定</dt><dd>FW S-V1.8 系以降は <code>config/robot.json</code> の firmware = "default"。古い版は v183 など</dd>
+<dt>1号機</dt><dd>FW S-V1.8-2、受信約 2900 Hz。電源投入時 J6 = −121°、J4 = −102.6° で SDK 制限の外だった</dd></dl></div>
+
+<div class="step"><h3><span class="no">5</span>J6 の原点確認（必要なら再校正）</h3>
+<pre>python scripts/00g_range.py            # 脱力した J6 を手で両端まで回す → 中心を表示
+python scripts/00h_calib_j6.py &lt;中心&gt;   # 中心が大きくずれていたときだけ（yes 入力で書込み）</pre>
+<dl><dt>合格</dt><dd>範囲の中心が 0° 付近（幅は約 340°）</dd>
+<dt>1号機</dt><dd>中心が約 −288.6° ずれていた → 再校正後 −168.49〜+174.29°（中心 +2.9°、そのまま使用）</dd>
+<dt>注意</dt><dd>SDK は範囲外の値を捨てるため表示が止まって見える。実値は <code>00f_raw_j6.py</code>（CAN 生データ ID 0x2A7）で見る。全軸一括の校正（255）は使わない</dd></dl></div>
+
+<div class="step"><h3><span class="no">6</span>初回動作</h3>
+<pre>python scripts/01_first_move.py</pre>
+<dl><dt>合格</dt><dd>手首0 → 全関節0 → 前傾 → 全関節0 がすべて到達、グリッパ 開 約0.06 m／閉 約0 m</dd></dl></div>
+
+<div class="step"><h3><span class="no">7</span>TCP 長さの照合と look 姿勢</h3>
+<pre>python scripts/02_jog.py     # ? でコマンド一覧。p は表示のみ（動かない）</pre>
+<dl><dt>TCP</dt><dd>ノギスでグリッパ取付け面から爪先端中央までを測り、<b>+50 mm</b> した値を <code>tcp_z</code> にする（SDK のフランジ点は取付け面より約 50 mm 手首側）。
+折りたたみ姿勢（h）で J1 軸中心から先端までの水平距離と天板からの高さを実測し、表示の TCP x・z と ±5 mm で合えば OK</dd>
+<dt>look</dt><dd>台A・B を置き、両方のボトルが爪にかからず上から見下ろせる姿勢にして <code>s look</code>。レンズからボトルまで 25 cm 以上（最短測距 189 mm）</dd>
+<dt>1号機</dt><dd>実測 95 mm → tcp_z = 0.145 m。折りたたみ姿勢で表示 x 201／実測 200 mm、z 226／実測 227 mm。ベース上面が z = 0、木の台の上面 z = 21 mm</dd></dl></div>
+
+<h3>C カメラ</h3>
+<div class="step"><h3><span class="no">8</span>カメラ疎通と最短距離</h3>
+<pre>python scripts/03_cam_check.py &gt; /dev/null     # 内部パラメータと中央の深度
+python scripts/04b_live_view.py &gt; /dev/null    # ライブ表示（q で終了）</pre>
+<dl><dt>合格</dt><dd>fx &gt; 0、深度が取れる。50 cm の対象が ±3% 程度。ボトルの深度が欠けずに1つの塊で見える</dd>
+<dt>1号機</dt><dd>カラー fx = fy = 488.1、cx 314.5、cy 210.7。深度→カラー −29.8 mm。50 cm で 514 mm。最短 189 mm</dd>
+<dt>注意</dt><dd>SDK のログは標準出力に出るので <code>&gt; /dev/null</code>。カメラは1プロセスしか開けない（他が開いていると res-6 BUSY）。透明ボトルは胴の深度が欠ける</dd></dl></div>
+
+<h3>D 校正</h3>
+<div class="step"><h3><span class="no">9</span>ハンドアイ校正（eye-in-hand）</h3>
+<pre># ターミナル1（カメラ）              # ターミナル2（腕）
+python scripts/05_handeye.py 51.0 &gt; /dev/null     python scripts/02_jog.py</pre>
+<dl><dt>準備</dt><dd><code>docs/aruco_id0_50mm_A4.pdf</code> を等倍印刷し、黒い正方形の一辺をノギスで測る（引数に mm で渡す）。台の上に平らに固定</dd>
+<dt>操作</dt><dd>ターミナル2で姿勢を変え、静止してからターミナル1の画面で c。位置と手首の向き（±20°）を変えて 10〜15 姿勢。q で計算</dd>
+<dt>合格</dt><dd>起動時の「姿勢角の解釈チェック」1 mm 未満。ばらつき平均 3 mm 以下。推定したマーカー中心がメジャー実測と ±5 mm</dd>
+<dt>1号機</dt><dd>17 姿勢、ばらつき平均 2.2／最大 4.6 mm。カメラ位置（フランジ基準）[−80.6, 16.7, 41.2] mm。推定 (350.9, 1.5, 21.8)／実測 (355, 3, 20) mm</dd>
+<dt>注意</dt><dd>OpenCV 5 系には calibrateHandEye が無いため自前実装（Park-Martin 法 + 最小二乗）。爪がマーカーを隠すと検出しない</dd></dl></div>
+
+<h3>E 検出</h3>
+<div class="step"><h3><span class="no">10</span>キャップ位置の推定（学習なし）</h3>
+<pre>python scripts/02_jog.py      # go look → q
+python scripts/06_locate.py &gt; /dev/null       # 確認画像 data/locate_result.jpg</pre>
+<dl><dt>方法</dt><dd>深度8枚の中央値 → ハンドアイでロボット座標 → 置き面 +30 mm より上の点 → 最上部（98%点）をキャップ上端 → 手前半分しか見えないキャップに半径 15 mm の円を当てはめて中心</dd>
+<dt>合格</dt><dd>ボトル高さが実測 ±10 mm、2回の差 1 mm 程度、キャップ位置がメジャー実測 ±5 mm</dd>
+<dt>1号機</dt><dd>見下ろし姿勢で高さ 207 mm（実測 207 mm）。ほぼ水平に見る姿勢では上端が +6 mm 高く出た → look は見下ろす向きに</dd>
+<dt>注意</dt><dd>置き面の高さは自動判定せず固定値（<code>surface_z</code>）を使う（浅い角度で見る面は点がまばらで誤判定した）</dd></dl></div>
+
+<h3>F 把持</h3>
+<div class="step"><h3><span class="no">11</span>接近試験（つかまない）</h3>
+<pre>python scripts/07_approach.py X Y Z --dry    # 手順10のキャップ上端 [mm]。関節角を表示するだけ
+python scripts/07_approach.py X Y Z          # pre（手前6 cm）→ near（手前2 cm）で停止して目視</pre>
+<dl><dt>合格</dt><dd>near でキャップが2本の爪の中央にある（左右・上下とも数 mm 以内）</dd></dl></div>
+
+<div class="step"><h3><span class="no">12</span>把持と 1 cm 持上げ</h3>
+<pre>python scripts/08_pick_test.py X Y Z --down 10 --force 2</pre>
+<dl><dt>合格</dt><dd>閉じた幅が 5 mm 以上（0 なら空振り）、持ち上げて3秒保持後も幅が変わらない、ボトルが浮く</dd>
+<dt>1号機</dt><dd>満水 500 ml（約 550 g）を力 2 N で持ち上げ成功</dd></dl></div>
+
+<h3>G 往復</h3>
+<div class="step"><h3><span class="no">13</span>台A・B の登録</h3>
+<pre>python scripts/09_pick_place.py --setup A    # ボトルを台Aに置いて
+python scripts/09_pick_place.py --setup B    # ボトルを台Bに置いて</pre>
+<dl><dt>内容</dt><dd>look から半径 30 cm 内でボトルを探し、キャップ上端を <code>data/stations.json</code> に記録。往復中はこの位置の半径 6 cm 内だけを探す</dd></dl></div>
+
+<div class="step"><h3><span class="no">14</span>往復の実行</h3>
+<pre>python scripts/09_pick_place.py 1            # 各段階で Enter 待ち
+python scripts/09_pick_place.py --set-advance B 10   # 台Bで浅くつかむ場合（放射方向に +10 mm）
+python scripts/09_pick_place.py 10 --auto    # 慣れたら連続</pre>
+<dl><dt>合格</dt><dd>置いた後の look で、キャップ位置が登録位置から 15 mm 以内（「成功」）。失敗するとその場で止まる</dd>
+<dt>記録</dt><dd><code>data/pp_trials.csv</code>：時刻、移動元・先、キャップ位置、閉じ幅、持上げ後の幅、結果、置き位置のずれ、サイクル時間</dd>
+<dt>1号機</dt><dd>台Bで爪が浅く失敗 → 台Bに前進補正を設定して解消。A↔B を繰り返し実行できた</dd></dl></div>
+
+<h2 class="page-break">5. 1サイクルの動き</h2>
+<figure>
+<svg viewBox="0 0 760 250" role="img" aria-label="1サイクルの動き">
+  <defs><marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0b6e69"/></marker></defs>
+  <line x1="20" y1="215" x2="740" y2="215" stroke="#1d232a" stroke-width="2"/>
+  <rect x="150" y="195" width="110" height="20" fill="#d5dae0"/><text x="205" y="236" text-anchor="middle" font-size="12">台A</text>
+  <rect x="500" y="195" width="110" height="20" fill="#d5dae0"/><text x="555" y="236" text-anchor="middle" font-size="12">台B</text>
+  <rect x="195" y="110" width="20" height="85" rx="5" fill="#fff" stroke="#56606b"/><rect x="199" y="98" width="12" height="12" fill="#fff" stroke="#56606b"/>
+  <rect x="545" y="110" width="20" height="85" rx="5" fill="#fff" stroke="#56606b" stroke-dasharray="4 3"/>
+  <g font-size="11" fill="#1d232a">
+    <circle cx="380" cy="30" r="6" fill="#0b6e69"/><text x="392" y="34">① look で両台を撮影</text>
+    <circle cx="150" cy="80" r="5" fill="#0b6e69"/><text x="40" y="74">② pre（手前 6 cm）</text>
+    <circle cx="200" cy="104" r="5" fill="#0b6e69"/><text x="230" y="100">③ grasp（上端 −10 mm）・閉じる</text>
+    <circle cx="200" cy="58" r="5" fill="#0b6e69"/><text x="230" y="50">④ 10 cm 持上げ</text>
+    <circle cx="550" cy="58" r="5" fill="#0b6e69"/><text x="580" y="50">⑤ 運搬</text>
+    <circle cx="550" cy="107" r="5" fill="#0b6e69"/><text x="580" y="104">⑥ 置き面 +3 mm で開く</text>
+    <circle cx="500" cy="80" r="5" fill="#0b6e69"/><text x="580" y="150">⑦ 引く → ① で置き位置を確認</text>
+  </g>
+  <path d="M150,80 L200,104" stroke="#0b6e69" stroke-width="2" fill="none" marker-end="url(#a2)"/>
+  <path d="M200,104 L200,62" stroke="#0b6e69" stroke-width="2" fill="none" marker-end="url(#a2)"/>
+  <path d="M205,58 L545,58" stroke="#0b6e69" stroke-width="2" fill="none" marker-end="url(#a2)"/>
+  <path d="M550,62 L550,102" stroke="#0b6e69" stroke-width="2" fill="none" marker-end="url(#a2)"/>
+  <path d="M550,107 L503,82" stroke="#0b6e69" stroke-width="2" fill="none" marker-end="url(#a2)"/>
+</svg>
+<figcaption>図3 台A → 台B の1サイクル（側面のイメージ）。グリッパは水平から 30° 下向きのまま、J1 軸から見て放射方向に近づく。台B → 台A も同じ。</figcaption>
+</figure>
+
+<table>
+  <tr><th>設定（config/robot.json）</th><th class="num">値</th><th>意味</th></tr>
+  <tr><td>pick.tilt_deg</td><td class="num">30</td><td>グリッパの下向き角度（水平から）</td></tr>
+  <tr><td>pick.grip_down</td><td class="num">0.010 m</td><td>キャップ上端から挟む位置までの距離</td></tr>
+  <tr><td>pick.pre</td><td class="num">0.060 m</td><td>把持点の手前に引く距離（ツール軸方向）</td></tr>
+  <tr><td>pick.lift</td><td class="num">0.100 m</td><td>持ち上げ高さ</td></tr>
+  <tr><td>pick.place_gap</td><td class="num">0.003 m</td><td>置くときに置き面より少し上で放す</td></tr>
+  <tr><td>pick.force_n</td><td class="num">2.0 N</td><td>把持力（上限 3 N）</td></tr>
+  <tr><td>pick.search_radius</td><td class="num">0.06 m</td><td>往復中、登録位置の周りで探す半径</td></tr>
+  <tr><td>pick.success_err_mm</td><td class="num">15 mm</td><td>置き位置のずれの合格線</td></tr>
+  <tr><td>surface_z</td><td class="num">0.021 m</td><td>台の上面の高さ（両台で同じ前提）</td></tr>
+  <tr><td>tcp_z</td><td class="num">0.145 m</td><td>SDK フランジ点から爪先端中央まで</td></tr>
+</table>
+
+<h2>6. 押さえておく性質</h2>
+<table>
+  <tr><th>性質</th><th>内容と使い方</th></tr>
+  <tr><td>グリッパの向き</td><td>J4 = 0 のとき、J2+J3+J5 = 5° で水平、95° で真下。全関節0でグリッパは水平から 5° 上向き。逆運動学はこの関係で J5 を決め、J2・J3 を解く（J1 = atan2(y, x)）</td></tr>
+  <tr><td>真下向きの限界</td><td>J5 の SDK 制限 ±70° のため、真下向きは TCP 高さ約 0.08 m 以下でしか成立しない。キャップ高さ（約 0.22 m）には上から届かないので、斜め 30° から挟む</td></tr>
+  <tr><td>姿勢角の順序</td><td>SDK の [roll, pitch, yaw] は scipy の <code>Rotation.from_euler("xyz", …)</code>（= Rz·Ry·Rx）で一致。05_handeye.py が起動時に自己検証する</td></tr>
+  <tr><td>順運動学</td><td>pyAgxArm の <code>fk()</code> は CAN 接続なしで計算できる。逆運動学とテストはこれを使うので実機と一致する</td></tr>
+  <tr><td>カメラ画像の向き</td><td>上下逆の取付けのため表示だけ 180° 回転（<code>camera_display_rotate_180</code>）。計算には元画像を使う</td></tr>
+</table>
+
+<h2>7. 起きた問題と対処</h2>
+<table>
+  <tr><th>現象</th><th>原因</th><th>対処</th></tr>
+  <tr><td>USB-CAN を挿しても CAN が出ない</td><td>JetPack 6 に gs_usb が無い</td><td>system/build_gs_usb.sh でビルド（updates/ に入れる）</td></tr>
+  <tr><td>J6 が −117° で stall・過電流、以降の指令が通らない</td><td>J6 原点が約 −288.6° ずれていた。SDK 表示は範囲外で固着</td><td>CAN 生データで範囲を測り、中心で calibrate_joint(6)、clear_joint_error(6)</td></tr>
+  <tr><td>傾けると TCP 高さが表示と 44 mm 違う</td><td>SDK のフランジ点は取付け面より約 50 mm 手首側</td><td>tcp_z = ノギス実測 + 50 mm</td></tr>
+  <tr><td>真下向きの直線移動がタイムアウト</td><td>J5 が制限 70° に到達</td><td>J5 に余裕のある姿勢で作り直す。把持は斜めから</td></tr>
+  <tr><td>カメラが開けない（res-6）</td><td>ライブ表示など別プロセスが使用中</td><td>他のカメラスクリプトを閉じる</td></tr>
+  <tr><td>置き面の高さを誤判定（193／177 mm）</td><td>浅い角度で見る面は点がまばら</td><td>surface_z を固定値で与える</td></tr>
+  <tr><td>キャップ上端が +6 mm 高い</td><td>ほぼ水平に見ると輪郭に背景との混合画素が出る</td><td>look を見下ろす向きに変更</td></tr>
+  <tr><td>キャップ中心が手前に寄る</td><td>キャップの手前半分しか見えない</td><td>半径 15 mm の円を当てはめる</td></tr>
+  <tr><td>台Bで爪が浅く失敗</td><td>台の位置により把持点の奥行きが不足</td><td>--set-advance B で放射方向に前進補正</td></tr>
+  <tr><td>保存姿勢 down が誤った値で上書き</td><td>未特定（同名で保存した可能性）</td><td>保存名を確認してから s。go の前に p で確認</td></tr>
+</table>
+
+<h2>8. 再現性確認の記録表（2号機用）</h2>
+<p>各手順の結果を記入する。1号機と大きく違う項目があれば、そこで止めて原因を調べる。</p>
+<table class="blank">
+  <tr><th style="width:24%">項目</th><th style="width:30%">1号機（2026-10-28）</th><th style="width:30%">2号機</th><th>判定</th></tr>
+  <tr><td>FW／HW</td><td>S-V1.8-2 ／ H-V1.2-1</td><td></td><td></td></tr>
+  <tr><td>USB ポート</td><td>1-2.2:1.0</td><td></td><td></td></tr>
+  <tr><td>J6 範囲・中心</td><td>−168.5〜+174.3°（+2.9°）※再校正後</td><td></td><td></td></tr>
+  <tr><td>電源投入時の制限外の関節</td><td>J6 −121°、J4 −102.6°</td><td></td><td></td></tr>
+  <tr><td>TCP 長さ（実測＋50）</td><td>95 + 50 = 145 mm</td><td></td><td></td></tr>
+  <tr><td>TCP 照合（x／z）</td><td>表示 201／226、実測 200／227 mm</td><td></td><td></td></tr>
+  <tr><td>カメラ内部パラメータ</td><td>fx 488.1、cx 314.5、cy 210.7</td><td></td><td></td></tr>
+  <tr><td>最短測距</td><td>189 mm</td><td></td><td></td></tr>
+  <tr><td>ハンドアイ ばらつき</td><td>平均 2.2／最大 4.6 mm（17姿勢）</td><td></td><td></td></tr>
+  <tr><td>カメラ位置（フランジ基準）</td><td>[−80.6, 16.7, 41.2] mm</td><td></td><td></td></tr>
+  <tr><td>マーカー 推定−実測</td><td>差 4／1.5／1.8 mm</td><td></td><td></td></tr>
+  <tr><td>ボトル高さ 推定／実測</td><td>207／207 mm</td><td></td><td></td></tr>
+  <tr><td>接近（near）の爪の中央</td><td>中央</td><td></td><td></td></tr>
+  <tr><td>1 cm 持上げ</td><td>成功（2 N）</td><td></td><td></td></tr>
+  <tr><td>前進補正</td><td>台Bのみ設定</td><td></td><td></td></tr>
+  <tr><td>往復 成功／試行</td><td>繰り返し成功</td><td>　　／</td><td></td></tr>
+  <tr><td>置き位置のずれ 平均／最大</td><td>pp_trials.csv 参照</td><td></td><td></td></tr>
+  <tr><td>サイクル時間</td><td>pp_trials.csv 参照</td><td></td><td></td></tr>
+</table>
+
+<h2>9. ファイル一覧</h2>
+<table>
+  <tr><th>ファイル</th><th>用途</th><th>腕</th></tr>
+  <tr><td>system/build_gs_usb.sh</td><td>gs_usb のビルドと組込み、起動時ロード</td><td>―</td></tr>
+  <tr><td>system/setup_can.sh</td><td>USB-CAN を探して udev ルール作成、can_piper 1 Mbps</td><td>―</td></tr>
+  <tr><td>system/install_python.sh</td><td>venv、pyAgxArm、pyorbbecsdk v1、piper_pp</td><td>―</td></tr>
+  <tr><td>scripts/00_check.py</td><td>FW・関節角・状態・ドライバ異常の表示</td><td>動かさない</td></tr>
+  <tr><td>scripts/00d_disable.py</td><td>脱力（全関節なら手で支える）</td><td>脱力</td></tr>
+  <tr><td>scripts/00f_raw_j6.py</td><td>CAN 生データで J5・J6 を表示</td><td>動かさない</td></tr>
+  <tr><td>scripts/00g_range.py</td><td>J6 の手回し範囲と中心</td><td>動かさない</td></tr>
+  <tr><td>scripts/00h_calib_j6.py</td><td>J6 原点の書き直し（yes 確認）</td><td>原点書込み</td></tr>
+  <tr><td>scripts/01_first_move.py</td><td>初回動作 4 姿勢＋グリッパ</td><td>動かす</td></tr>
+  <tr><td>scripts/02_jog.py</td><td>対話ジョグ、直線移動、グリッパ、姿勢保存</td><td>動かす</td></tr>
+  <tr><td>scripts/03_cam_check.py</td><td>カメラのパラメータ、中央深度、最短距離</td><td>―</td></tr>
+  <tr><td>scripts/04_snap.py ／ 04b_live_view.py</td><td>画像保存 ／ ライブ表示</td><td>―</td></tr>
+  <tr><td>scripts/05_make_marker.py ／ 05_handeye.py</td><td>ArUco 画像作成 ／ ハンドアイ校正</td><td>読むだけ</td></tr>
+  <tr><td>scripts/06_locate.py</td><td>キャップ位置の推定と確認画像</td><td>読むだけ</td></tr>
+  <tr><td>scripts/07_approach.py</td><td>キャップ手前まで接近（--dry あり）</td><td>動かす</td></tr>
+  <tr><td>scripts/08_pick_test.py</td><td>把持と 1 cm 持上げ</td><td>動かす</td></tr>
+  <tr><td>scripts/09_pick_place.py</td><td>台A・B の登録、前進補正、往復</td><td>動かす</td></tr>
+  <tr><td>tests/test_offline.py</td><td>実機なしの確認（pytest）</td><td>―</td></tr>
+</table>
+
+<h2>10. ライセンスと公開前の確認</h2>
+<div class="note">このリポジトリのライセンスは未定（社内で決定）。公開前に社内承認を得る。リポジトリには機体の IP アドレス、カメラのシリアル番号、data/ の中身を入れない。</div>
+<table>
+  <tr><th>依存</th><th>ライセンス</th><th>扱い</th></tr>
+  <tr><td>pyAgxArm</td><td>LGPL-3.0</td><td>同梱せず pip で入れる</td></tr>
+  <tr><td>pyorbbecsdk</td><td>Apache-2.0</td><td>同梱せずソースからビルド</td></tr>
+  <tr><td>gs_usb.c（Linux）</td><td>GPL-2.0</td><td>同梱せず、ビルドスクリプトのみ</td></tr>
+  <tr><td>Ultralytics YOLO</td><td>AGPL-3.0</td><td>使っていない（今後使う場合は要確認）</td></tr>
+</table>
+
+</main>
+</body>
+</html>

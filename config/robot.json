@@ -1,0 +1,46 @@
+{
+  "_comment": "機体ごとに変わる値。別の機体では、ここと data/ の中身を測り直す。単位は m・deg・N",
+  "can_channel": "can_piper",
+  "firmware": "default",
+  "tcp_z": 0.145,
+  "speed_percent": 10,
+  "j6_limit_deg": 90,
+  "surface_z": 0.021,
+  "camera_min_range": 0.19,
+  "camera_display_rotate_180": true,
+  "pick": {
+    "tilt_deg": 30.0,
+    "grip_down": 0.010,
+    "pre": 0.060,
+    "lift": 0.100,
+    "place_gap": 0.003,
+    "force_n": 2.0,
+    "open_width": 0.060,
+    "search_radius": 0.06,
+    "success_err_mm": 15
+  },
+  "vision": {
+    "cap_radius": 0.015,
+    "cap_band": 0.012,
+    "above_surface": 0.03,
+    "n_frames": 8
+  },
+  "yolo": {
+    "_comment": "V1: YOLO でボトルの枠を出し、枠内の点だけでキャップ位置を求める。class 39 = COCO の bottle",
+    "model": "yolo11n.pt",
+    "conf": 0.30,
+    "class_id": 39,
+    "box_margin": 0.15,
+    "device": "cuda"
+  },
+  "ros2": {
+    "_comment": "B（ROS2＋MoveIt）用。速度の割合は A と同じ考え方で控えめに",
+    "max_velocity_scaling": 0.10,
+    "max_acceleration_scaling": 0.10,
+    "planner_id": "RRTConnectkConfigDefault",
+    "arrive_tol_deg": 0.5,
+    "arrive_timeout_s": 30.0,
+    "plan_retries": 3,
+    "j4_limit_deg": 100
+  }
+}

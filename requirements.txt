@@ -1,0 +1,6 @@
+# pip install -r requirements.txt（pyAgxArm と pyorbbecsdk は system/install_python.sh で入れる）
+numpy
+scipy
+python-can>3.3.4
+opencv-contrib-python   # Jetson に cv2.aruco 付きの OpenCV が入っていれば不要
+pytest

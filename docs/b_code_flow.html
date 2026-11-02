@@ -1,0 +1,369 @@
+<title>PiPER B コードの流れ</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=BIZ+UDPGothic:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* レイアウト: 左に節番号つきの細い見出し欄、右に本文。図は紙の色の版に載せる（GIF と同じ紙色） */
+:root {
+  --paper: #f7f6f1; --plate: #fffefa; --ink: #1b1f24; --sub: #5c636b; --rule: #dcdad2;
+  --moveit: #c2621a; --sdk: #1f5fa8; --ok: #3f7a1a; --ng: #b3261e; --code-bg: #efede5;
+  --f-display: "Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", sans-serif;
+  --f-body: "BIZ UDPGothic", "Hiragino Sans", "Noto Sans JP", sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #16181b; --plate: #f7f6f1; --ink: #e9e7e0; --sub: #a3a8ae; --rule: #33373c;
+  --moveit: #e08a4a; --sdk: #6fa3df; --ok: #86bf5c; --ng: #ec6b62; --code-bg: #22262a; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --paper: #16181b; --plate: #f7f6f1; --ink: #e9e7e0; --sub: #a3a8ae; --rule: #33373c;
+  --moveit: #e08a4a; --sdk: #6fa3df; --ok: #86bf5c; --ng: #ec6b62; --code-bg: #22262a; color-scheme: dark }
+
+body { background: var(--paper); color: var(--ink); font-family: var(--f-body); font-size: 15.5px; line-height: 1.75; }
+.wrap { max-width: 1080px; margin: 0 auto; padding-block: 40px 72px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header { display: grid; gap: 14px; padding-bottom: 28px; border-bottom: 2px solid var(--ink); }
+.eyebrow { font-family: var(--f-mono); font-size: 12px; letter-spacing: .08em; color: var(--sub); text-transform: uppercase; }
+h1 { font-family: var(--f-display); font-weight: 900; font-size: clamp(30px, 5vw, 48px); line-height: 1.15; margin: 0; text-wrap: balance; }
+h1 em { font-style: normal; color: var(--moveit); }
+.lede { max-width: 62ch; margin: 0; color: var(--ink); }
+.facts { display: flex; flex-wrap: wrap; gap: 8px 22px; font-family: var(--f-mono); font-size: 12.5px; color: var(--sub); }
+.facts b { color: var(--ink); font-weight: 600; }
+
+section { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 28px; padding-block: 40px; border-bottom: 1px solid var(--rule); }
+.sec-label { font-family: var(--f-mono); font-size: 12px; color: var(--sub); line-height: 1.5; padding-top: 6px; }
+.sec-label b { display: block; font-family: var(--f-display); font-size: 34px; color: var(--moveit); line-height: 1; margin-bottom: 6px; }
+h2 { font-family: var(--f-display); font-weight: 700; font-size: 25px; margin: 0 0 10px; text-wrap: balance; }
+h3 { font-family: var(--f-display); font-weight: 700; font-size: 17px; margin: 26px 0 6px; }
+p { margin: 0 0 12px; max-width: 68ch; }
+.body { min-width: 0; }
+
+figure { margin: 18px 0; }
+.plate { background: var(--plate); border: 1px solid var(--rule); border-radius: 4px; overflow-x: auto; }
+.plate img { display: block; width: 100%; height: auto; }
+figcaption { font-size: 13px; color: var(--sub); margin-top: 8px; max-width: 70ch; }
+
+code, .mono { font-family: var(--f-mono); font-size: .88em; }
+:not(pre) > code { background: var(--code-bg); padding: 1px 5px; border-radius: 3px; }
+pre { background: var(--code-bg); border-radius: 4px; padding: 14px 16px; overflow-x: auto; font-family: var(--f-mono); font-size: 12.8px; line-height: 1.6; margin: 12px 0; }
+pre .c { color: var(--sub); }
+pre .k { color: var(--moveit); font-weight: 600; }
+
+.flow { list-style: none; padding: 0; margin: 14px 0; display: grid; gap: 0; counter-reset: step; }
+.flow li { display: grid; grid-template-columns: 34px 120px minmax(0, 1fr); gap: 12px; align-items: baseline; padding: 9px 0; border-top: 1px dashed var(--rule); }
+.flow li::before { counter-increment: step; content: counter(step); font-family: var(--f-mono); font-size: 12px; color: var(--sub); }
+.flow .what { font-family: var(--f-display); font-weight: 700; }
+.flow .how { min-width: 0; }
+.flow .how code { white-space: nowrap; }
+
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+.tbl { overflow-x: auto; margin: 14px 0; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--f-display); font-weight: 700; font-size: 13px; color: var(--sub); border-bottom: 1.5px solid var(--ink); }
+td.num { font-family: var(--f-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; }
+.note { border-left: 3px solid var(--moveit); padding: 4px 0 4px 14px; margin: 14px 0; max-width: 68ch; }
+.note.ng { border-color: var(--ng); }
+.note b { font-family: var(--f-display); }
+.pill { display: inline-block; font-family: var(--f-mono); font-size: 11.5px; padding: 1px 8px; border-radius: 99px; border: 1px solid currentColor; }
+.pill.ok { color: var(--ok); } .pill.ng { color: var(--ng); } .pill.mv { color: var(--moveit); }
+
+svg text { font-family: var(--f-body); }
+.arch { min-width: 760px; }
+
+footer { padding-top: 28px; font-size: 13px; color: var(--sub); }
+
+@media (max-width: 760px) {
+  section { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .sec-label b { display: inline; font-size: 24px; margin-right: 8px; }
+  .flow li { grid-template-columns: 26px minmax(0, 1fr); }
+  .flow .how { grid-column: 2; }
+}
+@media print {
+  body { font-size: 11pt; }
+  .wrap { padding-block: 0; max-width: none; }
+  section { break-inside: auto; padding-block: 18px; }
+  figure, .tbl, pre, .flow li { break-inside: avoid; }
+  .arch { min-width: 0; }
+  pre { white-space: pre-wrap; word-break: break-all; font-size: 10.5px; }
+  .plate { overflow: visible; }
+}
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">piper-bottle-pp / ros2 · 方式 B</div>
+  <h1>PiPER B（ROS2＋MoveIt＋YOLO）<br><em>コードの流れ</em></h1>
+  <p class="lede">ペットボトルを台A↔台Bで往復させる B 方式が、どのプログラムのどの関数で、何を順に行っているか。2026-10-30 の実機試験で直したところも含めて、図と動きで追う。</p>
+  <div class="facts">
+    <span>腕 <b>AgileX PiPER</b>（FW S-V1.8-2）</span>
+    <span>制御 <b>Jetson Orin NX / JetPack 6.2.1 / ROS 2 Humble</b></span>
+    <span>カメラ <b>Orbbec Dabai DC1</b>（手首、上下逆）</span>
+    <span>TCP <b>0.145 m</b></span>
+  </div>
+</header>
+
+<section>
+  <div class="sec-label"><b>1</b>構成</div>
+  <div class="body">
+    <h2>3つの端末、3つのプログラム</h2>
+    <p>実機は <code>agx_arm_ctrl</code>（AgileX 公式ドライバ）だけが CAN で動かす。MoveIt は ros2_control の <b>mock</b>（仮想の腕）を動かし、ドライバがその関節角を <code>move_j</code> で実機へ送る。実機の角度は <code>/feedback/joint_states</code> に戻ってくるので、計画の始点と到達の判定はそちらを使う。</p>
+    <figure>
+      <div class="plate">
+        <svg class="arch" viewBox="0 0 1000 460" width="100%" role="img" aria-label="B の構成図">
+          <defs>
+            <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1b1f24"/></marker>
+            <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#c2621a"/></marker>
+          </defs>
+          <rect x="0" y="0" width="1000" height="460" fill="#fffefa"/>
+          <!-- 端末1 -->
+          <rect x="20" y="40" width="470" height="270" fill="none" stroke="#c9c6bb" stroke-dasharray="5 4"/>
+          <text x="32" y="32" font-size="13" fill="#5c636b">端末1  bash ros2/launch_b.sh</text>
+          <rect x="40" y="62" width="190" height="96" rx="3" fill="#f3e3d5" stroke="#c2621a"/>
+          <text x="54" y="88" font-size="15" font-weight="700" fill="#1b1f24">move_group</text>
+          <text x="54" y="110" font-size="12.5" fill="#1b1f24">OMPL RRTConnect</text>
+          <text x="54" y="128" font-size="12.5" fill="#1b1f24">計画シーン＋Octomap</text>
+          <text x="54" y="146" font-size="12.5" fill="#1b1f24">（2 cm 格子）</text>
+          <rect x="250" y="62" width="190" height="96" rx="3" fill="#ecebe5" stroke="#5c636b"/>
+          <text x="264" y="88" font-size="15" font-weight="700" fill="#1b1f24">ros2_control</text>
+          <text x="264" y="110" font-size="12.5" fill="#1b1f24">mock_components</text>
+          <text x="264" y="128" font-size="12.5" fill="#1b1f24">arm / gripper_controller</text>
+          <text x="264" y="146" font-size="12.5" fill="#1b1f24">仮想の腕</text>
+          <rect x="250" y="196" width="190" height="96" rx="3" fill="#ecebe5" stroke="#5c636b"/>
+          <text x="264" y="222" font-size="15" font-weight="700" fill="#1b1f24">agx_arm_ctrl</text>
+          <text x="264" y="244" font-size="12.5" fill="#1b1f24">pyAgxArm（system python）</text>
+          <text x="264" y="262" font-size="12.5" fill="#1b1f24">mock の角度 → move_j</text>
+          <text x="264" y="280" font-size="12.5" fill="#1b1f24">CAN can_piper 1 Mbps</text>
+          <rect x="40" y="196" width="190" height="96" rx="3" fill="#ecebe5" stroke="#5c636b"/>
+          <text x="54" y="222" font-size="15" font-weight="700" fill="#1b1f24">RViz</text>
+          <text x="54" y="244" font-size="12.5" fill="#1b1f24">計画した軌道を再生</text>
+          <text x="54" y="262" font-size="12.5" fill="#1b1f24">/display_planned_path</text>
+          <path d="M230,110 L248,110" stroke="#1b1f24" stroke-width="1.6" marker-end="url(#ar)"/>
+          <path d="M345,158 L345,194" stroke="#1b1f24" stroke-width="1.6" marker-end="url(#ar)"/>
+          <text x="352" y="182" font-size="11.5" fill="#5c636b">/control/joint_states</text>
+          <!-- PiPER -->
+          <rect x="250" y="350" width="190" height="56" rx="3" fill="#1b1f24"/>
+          <text x="345" y="384" font-size="15" font-weight="700" fill="#fffefa" text-anchor="middle">PiPER 実機</text>
+          <path d="M345,292 L345,348" stroke="#1b1f24" stroke-width="1.6" marker-end="url(#ar)"/>
+          <path d="M440,396 L700,396 L700,392" stroke="#1b1f24" stroke-width="1.6" fill="none" marker-end="url(#ar)"/>
+          <text x="452" y="420" font-size="11.5" fill="#1b1f24">/feedback/joint_states 約 190 Hz（実機の角度）→ 計画の始点・到達の判定・認識の座標変換</text>
+          <!-- 端末2 -->
+          <rect x="540" y="40" width="440" height="140" fill="none" stroke="#c9c6bb" stroke-dasharray="5 4"/>
+          <text x="552" y="32" font-size="13" fill="#5c636b">端末2  python ros2/camera_node.py</text>
+          <rect x="560" y="60" width="400" height="104" rx="3" fill="#dde7f3" stroke="#1f5fa8"/>
+          <text x="574" y="86" font-size="15" font-weight="700" fill="#1b1f24">camera_node（/bottle_vision）</text>
+          <text x="574" y="108" font-size="12.5" fill="#1b1f24">カメラを開いたまま。点群 2 Hz → /camera/depth/color/points</text>
+          <text x="574" y="126" font-size="12.5" fill="#1b1f24">サービス ~/locate（YOLO＋点群 → キャップ位置 JSON）</text>
+          <text x="574" y="144" font-size="12.5" fill="#1b1f24">TF link6 → カメラ、~/image（枠付き画像）、~/caps</text>
+          <!-- 端末3 -->
+          <rect x="540" y="230" width="440" height="176" fill="none" stroke="#c9c6bb" stroke-dasharray="5 4"/>
+          <text x="552" y="222" font-size="13" fill="#5c636b">端末3  python ros2/task_moveit.py …</text>
+          <rect x="560" y="250" width="400" height="138" rx="3" fill="#f3e3d5" stroke="#c2621a"/>
+          <text x="574" y="276" font-size="15" font-weight="700" fill="#1b1f24">task_moveit（pymoveit2 5.0.0）</text>
+          <text x="574" y="298" font-size="12.5" fill="#1b1f24">locate → IK で目標の関節角 → 区間ごとに</text>
+          <text x="574" y="316" font-size="12.5" fill="#1b1f24">plan → 制限の確認 → RViz に表示 → execute</text>
+          <text x="574" y="334" font-size="12.5" fill="#1b1f24">→ 実機の到達を待つ → グリッパ → 記録</text>
+          <text x="574" y="356" font-size="12" fill="#5c636b">data/cycles_B.csv, segments_B.csv, traj_B.csv</text>
+          <!-- 矢印 -->
+          <path d="M760,250 L760,166" stroke="#1f5fa8" stroke-width="1.6" marker-end="url(#ar)"/>
+          <text x="768" y="214" font-size="11.5" fill="#1f5fa8">Trigger（locate）</text>
+          <path d="M560,100 L505,100 L505,54 L105,54 L105,60" stroke="#1f5fa8" stroke-width="1.6" fill="none" marker-end="url(#ar)" stroke-dasharray="4 3"/>
+          <text x="447" y="92" font-size="11.5" fill="#1f5fa8">点群</text>
+          <path d="M560,320 L520,320 L520,46 L170,46 L170,60" stroke="#c2621a" stroke-width="1.6" fill="none" marker-end="url(#ao)"/>
+          <text x="300" y="41" font-size="11.5" fill="#c2621a">計画・実行（pymoveit2）</text>
+        </svg>
+      </div>
+      <figcaption>端末4 では <code>rqt_image_view /bottle_vision/image</code> で YOLO の枠を見る（Jetson の RViz に Image 表示を足すと 3D 表示が真っ暗になるため）。</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section>
+  <div class="sec-label"><b>2</b>1サイクル<br>run()</div>
+  <div class="body">
+    <h2>look から look2 までの 8 区間</h2>
+    <p><code>Task.run()</code> がサイクルを回す。目標は手先の位置で決め、自前の IK（<code>kinematics.solve</code>、A と同じ）で関節角にしてから MoveIt に渡す（<code>--mode joint</code>）。区間ごとに「計画 → 実行 → 実機の到達を待つ」を繰り返す。</p>
+    <figure>
+      <div class="plate"><img src="img/b_cycle.gif" alt="1サイクルの動き。横から見た腕と、上から見た J1 の向き、区間の帯" width="960" height="540"></div>
+      <figcaption>説明用の再現（PiPER の MDH パラメータで描画、寸法は概略）。台Aでつかみ、J1 を回して台Bへ運ぶ。</figcaption>
+    </figure>
+    <ol class="flow">
+      <li><span class="what">シーン</span><span class="how"><code>setup_scene()</code> 床・台A・台B の箱を計画シーンへ。台の高さは台ごと（<code>station_surface</code>）</span></li>
+      <li><span class="what">look</span><span class="how"><code>move("look")</code> 両方の台が写る姿勢へ</span></li>
+      <li><span class="what">認識</span><span class="how"><code>locate_retry()</code> → camera_node の <code>~/locate</code>。どちらの台にあるかとキャップ位置</span></li>
+      <li><span class="what">目標</span><span class="how"><code>grasp = cap − grip_down + zoff_pick</code>、外向きに <code>adv_pick</code>。<code>pre</code> は 6 cm 手前、<code>lift</code> は 10 cm 上。置き先も同様（4 節）</span></li>
+      <li><span class="what">円柱</span><span class="how"><code>prepare_octomap()</code> ボトルを円柱で置き、点群から外す（5 節）</span></li>
+      <li><span class="what">pre → grasp</span><span class="how"><code>gripper(OPEN)</code> → <code>move("pre")</code> → <code>move("grasp")</code></span></li>
+      <li><span class="what">閉じる</span><span class="how"><code>gripper(0)</code>。開き幅が落ち着くまで待つ。5 mm 未満なら「つかめず」</span></li>
+      <li><span class="what">運ぶ</span><span class="how"><code>attach_bottle()</code>（円柱を tcp_link に付ける）→ <code>lift</code> → <code>transport</code> → <code>place</code></span></li>
+      <li><span class="what">離す</span><span class="how"><code>gripper(OPEN)</code> → <code>release_bottle()</code> → <code>retreat</code> → <code>look2</code></span></li>
+      <li><span class="what">確認</span><span class="how"><code>locate_retry()</code> で置き先を撮り、置き位置のずれを記録。15 mm 以内で「成功」、見つからなければ止める</span></li>
+    </ol>
+    <h3>1区間の中身：move()</h3>
+<pre><span class="k">def</span> move(self, name, q_deg, start=None):
+    traj, pms, tries, note = self.plan(q_deg, start=start)   <span class="c"># 計画。|J6|≤90°, |J4|≤100° を外れたら計画し直す（3回まで）</span>
+    self.show(traj, start)                                   <span class="c"># RViz の Planned Path に表示</span>
+    <span class="k">if</span> self.dry: <span class="k">return</span> target                              <span class="c"># --dry は計画だけ（前の区間の終点から計画）</span>
+    self.wait(f"{name} を実行します。")                       <span class="c"># --auto でなければ Enter 待ち</span>
+    self.arm.execute(traj)                                   <span class="c"># MoveIt が mock の腕を動かす</span>
+    ok, _ = self.fb.wait_arrival(target, 0.5, 30.0, self.log) <span class="c"># 実機の角度が 0.5° 以内を 0.3 s 保つまで</span></pre>
+  </div>
+</section>
+
+<section>
+  <div class="sec-label"><b>3</b>認識<br>camera_node</div>
+  <div class="body">
+    <h2>点群に YOLO の枠を重ねてキャップを探す</h2>
+    <p><code>on_locate()</code> は、呼ばれた時刻より後に撮った深度を 3 枚そろえる（<code>frames_after</code>）。腕が止まってからの画像だけを使うためで、撮影中に腕が 0.1° 以上動いたら警告を出す。</p>
+    <ol class="flow">
+      <li><span class="what">点群</span><span class="how"><code>vision.depth_points()</code> 3 枚の中央値 → カラーカメラ座標の点</span></li>
+      <li><span class="what">座標変換</span><span class="how"><code>T_base_cam(q)</code> = 実機の関節角の順運動学 × ハンドアイ（<code>T_flange_cam.npy</code>）</span></li>
+      <li><span class="what">YOLO</span><span class="how"><code>vision_yolo.detect()</code> 画像を 180° 回して yolo11n（class 39 bottle、conf 0.30）。枠は元の向きへ戻す</span></li>
+      <li><span class="what">絞り込み</span><span class="how"><code>filter_by_boxes()</code> 枠（15% 広げる）に写る点だけ残す。V0 はここを飛ばす</span></li>
+      <li><span class="what">キャップ</span><span class="how"><code>vision.locate_in()</code> 台ごとに半径 60 mm 内の点から、上端の高さと円の中心</span></li>
+    </ol>
+    <div class="two">
+      <figure>
+        <div class="plate"><img src="img/b_vision.gif" alt="点群からキャップの位置を求める手順" width="880" height="388"></div>
+        <figcaption>キャップ位置の求め方（A と B で共通の <code>locate_in</code>）。</figcaption>
+      </figure>
+      <figure>
+        <div class="plate"><img src="img/b_search.gif" alt="見つからないときに J1 を回して探す" width="960" height="460"></div>
+        <figcaption>見つからないときは 2 回撮り直し、まだなら J1 を右へ 5° → 10° → 15° 回して撮る。視野は説明用。</figcaption>
+      </figure>
+    </div>
+    <div class="note"><b>今日分かったこと：</b>look はほぼ水平に見る姿勢（[0, 2.3, −1.3, 0, 16.6, 0]°）のため、斜めに見る台Bではキャップが実物より約 26 mm 低く出た（台の実測差は 5 mm）。台ごとの上下の補正で合わせている。</div>
+    <p>時間：認識全体で 0.6〜0.7 s。そのうち YOLO は 49 ms（初回だけ GPU の準備で 1.06 s）。</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-label"><b>4</b>台ごとの補正<br>stations.json</div>
+  <div class="body">
+    <h2>つかむ位置と置く位置を、台ごとに別々に</h2>
+    <p>目標は認識したキャップ位置から計算し、台ごとの補正を足す。補正は <code>data/stations.json</code> にあり、毎サイクル読み直す。A（<code>09_pick_place.py</code>）と B で同じ式を使う。</p>
+<pre><span class="c"># つかむ（台 src）</span>
+grasp    = cap − [0, 0, grip_down − zoff[src].pick]
+grasp.xy += adv_pick[src] × 外向き（J1 軸から）
+<span class="c"># 置く（台 dst）</span>
+place.xy = 台 dst の位置 + adv[dst] × 外向き
+place.z  = cap.z − surface[src] + surface[dst] + zoff[dst].place − grip_down + place_gap</pre>
+    <figure>
+      <div class="plate">
+        <svg viewBox="0 0 900 300" width="100%" role="img" aria-label="補正の向き">
+          <rect width="900" height="300" fill="#fffefa"/>
+          <rect x="390" y="230" width="140" height="40" fill="#c9c6bb"/>
+          <text x="460" y="290" font-size="13" fill="#5c636b" text-anchor="middle">台</text>
+          <rect x="427" y="70" width="66" height="160" fill="none" stroke="#7d8a96" stroke-width="2"/>
+          <rect x="445" y="48" width="30" height="22" fill="#7d8a96"/>
+          <circle cx="60" cy="150" r="14" fill="#fffefa" stroke="#1b1f24" stroke-width="2.5"/>
+          <text x="60" y="186" font-size="12.5" fill="#5c636b" text-anchor="middle">J1 軸</text>
+          <line x1="80" y1="150" x2="300" y2="150" stroke="#c9c6bb" stroke-dasharray="4 4"/>
+          <circle cx="460" cy="68" r="6" fill="#c2621a"/>
+          <text x="440" y="40" font-size="12.5" fill="#1b1f24" text-anchor="end">認識したキャップ上端</text>
+          <path d="M520,68 L640,68" stroke="#c2621a" stroke-width="2.5" marker-end="url(#ao2)"/>
+          <text x="540" y="50" font-size="13.5" fill="#c2621a" font-weight="700">adv / adv_pick</text>
+          <text x="560" y="90" font-size="12" fill="#5c636b">外向きが正 [mm]</text>
+          <path d="M700,150 L700,70" stroke="#1f5fa8" stroke-width="2.5" marker-end="url(#ab2)"/>
+          <text x="712" y="112" font-size="13.5" fill="#1f5fa8" font-weight="700">zoff</text>
+          <text x="712" y="132" font-size="12" fill="#5c636b">上が正 [m]</text>
+          <text x="712" y="152" font-size="12" fill="#5c636b">pick と place で別</text>
+          <defs>
+            <marker id="ao2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#c2621a"/></marker>
+            <marker id="ab2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f5fa8"/></marker>
+          </defs>
+        </svg>
+      </div>
+      <figcaption>今日の値は実機の <code>data/stations_run2.json</code> に保存。現場で「台Bでつかむ位置を 10 mm 上へ」のように指示し、その都度書き換えた。</figcaption>
+    </figure>
+    <div class="note ng"><b>置く高さが低すぎると：</b>ボトルの底が台に当たったまま腕が止まり（到達の許容 0.5° の中）、グリッパを開いた瞬間に腕が本来の高さまで下がる。指令の座標は place のまま変わっていない。</div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-label"><b>5</b>計画シーン<br>と点群</div>
+  <div class="body">
+    <h2>つかむボトルを、点群の障害物から外す</h2>
+    <p>camera_node が動いていると、MoveIt の Octomap は常に有効になる。何もしないと、つかむボトル自体が障害物になり、grasp が計画できない。そこで <code>--octomap</code> を付けなくても、Octomap があれば同じ扱いにする。</p>
+    <ol class="flow">
+      <li><span class="what">近づく前</span><span class="how"><code>prepare_octomap()</code> ボトルの円柱（キャップ上端＋40 mm まで）を置き、<code>allow_collisions(True)</code>、Octomap を撮り直す</span></li>
+      <li><span class="what">運ぶ間</span><span class="how"><code>attach_bottle()</code> 衝突を見る設定に戻し、円柱を <code>tcp_link</code> に付ける（指との接触は touch_links で許す）</span></li>
+      <li><span class="what">置いた後</span><span class="how"><code>release_bottle()</code> 円柱は外して残す（消すと点に戻り、引くときに指と当たる判定になる）</span></li>
+    </ol>
+    <figure>
+      <div class="plate"><img src="img/b_octomap.gif" alt="グリッパの計画が失敗した理由と直し方" width="960" height="460"></div>
+      <figcaption>run2 の途中で「グリッパの計画に失敗（閉じる）」で止まった原因。キャップが低く出る台Bで、円柱の上に残ったボトル上部の点に指が当たっていた。</figcaption>
+    </figure>
+    <p>点群は台の天面を含めないよう、置き面＋30 mm より下を落としている（台は計画シーンの箱で表す）。12 mm では深度の誤差で台Bの天面が紫の板として残った。</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-label"><b>6</b>実行と遅れ</div>
+  <div class="body">
+    <h2>MoveIt の「完了」は実機の到達ではない</h2>
+    <figure>
+      <div class="plate"><img src="img/b_lag.gif" alt="MoveIt の完了と実機の到達のずれ" width="960" height="420"></div>
+      <figcaption>grasp 区間の実測値（MoveIt 完了 1.45 s、実機到達 1.76 s）。どの区間も +0.30〜0.32 s で一定だった。</figcaption>
+    </figure>
+    <p>実機の追従は mock → <code>agx_arm_ctrl</code> → <code>move_j</code> の経路で約 0.3 s 遅れる。<code>wait_arrival()</code> が実機の角度で到達を判定し、その間の関節角を約 20 Hz で <code>traj_B.csv</code> に残す（A と同じ列）。</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-label"><b>7</b>結果</div>
+  <div class="body">
+    <h2>1号機の実機結果（2026-10-30）</h2>
+    <div class="tbl"><table>
+      <thead><tr><th>項目</th><th>結果</th><th></th></tr></thead>
+      <tbody>
+        <tr><td>tcp_link と A の TCP の一致</td><td class="num">0.09 mm / 0.000°</td><td><span class="pill ok">合格</span></td></tr>
+        <tr><td>MoveIt 完了 → 実機到達</td><td class="num">+0.30〜0.32 s</td><td><span class="pill mv">一定</span></td></tr>
+        <tr><td>計画時間（1区間 / 1サイクル）</td><td class="num">20〜75 ms / 230〜300 ms</td><td>すべて 1 回で成功</td></tr>
+        <tr><td>認識（全体 / YOLO）</td><td class="num">0.6〜0.7 s / 49 ms</td><td>初回のみ 1.06 s</td></tr>
+        <tr><td>往復 10 サイクル（初期設定 run1）</td><td class="num">10/10 成功</td><td>置き位置のずれ 平均 6.3 mm、最大 10.1 mm</td></tr>
+        <tr><td>1サイクルの時間（--auto）</td><td class="num">約 26 s</td><td>腕が動く時間は約 16 s</td></tr>
+        <tr><td>調整後（run2）</td><td>補正を入れて継続</td><td>途中の停止を直した：グリッパの計画失敗、見つからず、ずれ大</td></tr>
+      </tbody>
+    </table></div>
+    <h3>途中で止まった原因と直し方</h3>
+    <div class="tbl"><table>
+      <thead><tr><th>止まり方</th><th>原因</th><th>直し方</th></tr></thead>
+      <tbody>
+        <tr><td>grasp が計画できない</td><td>つかむボトルが Octomap の障害物</td><td>Octomap があれば円柱で外す</td></tr>
+        <tr><td>グリッパの計画に失敗（閉じる）</td><td>キャップが低く出て、円柱の上にボトル上部の点が残る</td><td><code>CAP_MARGIN = 0.04</code></td></tr>
+        <tr><td>見つからない / 置き先に無い</td><td>YOLO の取りこぼし、視野の端</td><td><code>locate_retry()</code>：撮り直し 2 回 → J1 を右へ回す</td></tr>
+        <tr><td>ずれ大（15 mm 超）で停止</td><td>置き位置の評価基準で止めていた</td><td>記録して継続。置き先に無いときだけ止める</td></tr>
+        <tr><td>RViz の 3D が真っ暗</td><td>Jetson で Image 表示を足した</td><td>画像は rqt_image_view で見る</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-label"><b>8</b>ファイル</div>
+  <div class="body">
+    <h2>どこに何があるか</h2>
+    <div class="tbl"><table>
+      <thead><tr><th>ファイル</th><th>役割</th></tr></thead>
+      <tbody>
+        <tr><td class="num">ros2/launch_b.sh</td><td>agx_arm_ctrl＋MoveIt＋RViz を起動（起動時に腕は全関節 0 へ）</td></tr>
+        <tr><td class="num">ros2/camera_node.py</td><td>点群の配信、locate サービス、TF、枠付き画像</td></tr>
+        <tr><td class="num">ros2/task_moveit.py</td><td>往復タスク。<code>--dry</code> / <code>--auto</code> / <code>--mode</code> / <code>--obstacle</code> / <code>--octomap</code></td></tr>
+        <tr><td class="num">ros2/goto.py</td><td>保存姿勢へ移動。<code>deg J1…J6</code> で関節角を直接、<code>now</code> で今の角度</td></tr>
+        <tr><td class="num">ros2/save_pose.py</td><td>今の姿勢を poses.json に保存（同名は <code>_prev</code> に退避）</td></tr>
+        <tr><td class="num">ros2/p1_check.py</td><td>TCP の一致と遅れの測定</td></tr>
+        <tr><td class="num">ros2/rosutil.py</td><td>実機の関節角の受信（Feedback）と到達待ち</td></tr>
+        <tr><td class="num">piper_pp/vision.py, vision_yolo.py</td><td>点群、YOLO、キャップ位置（A と共通）</td></tr>
+        <tr><td class="num">piper_pp/runlog.py, seglog.py</td><td>記録（cycles / segments / traj）と台ごとの補正</td></tr>
+        <tr><td class="num">scripts/11_make_report.py</td><td>A と B の記録から比較レポート</td></tr>
+      </tbody>
+    </table></div>
+<pre><span class="c"># 端末3（ROS2・venv は source ros2/env.sh）</span>
+python ros2/task_moveit.py --dry --ros-args -r joint_states:=/feedback/joint_states
+python ros2/task_moveit.py 10 --auto --ros-args -r joint_states:=/feedback/joint_states</pre>
+  </div>
+</section>
+
+<footer>piper-bottle-pp · docs/b_code_flow.html · 2026-10-30。GIF は説明用の再現で、数値は実機ログから。</footer>
+</div>
